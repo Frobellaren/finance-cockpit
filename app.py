@@ -1,23 +1,13 @@
 import streamlit as st
-import pandas as pd
+from src.finance_cockpit.metrics import create_dummy_monthly_overview
 
 st.title("Finance Cockpit")
 
-st.write("Första versionen av min privatekonomi-app")
-
-#Dummy-data
-
-data = {
-    "month" : ["Jan", "Feb", "Mar", "Apr", "Maj", "Jun"],
-    "income" : [13500,13500,13500,13500,13500,13500],
-    "expenses" : [10000,10000,10000,10000,10000,10000]
-}
-
-df = pd.DataFrame(data)
-df["savings"] = df["income"] - df["expenses"]
+df = create_dummy_monthly_overview()
 
 st.subheader("Månadsdata")
-st.dataframe(df)
+st.dataframe(df, use_container_width=True)
 
 st.subheader("Sparande över tid")
 st.line_chart(df.set_index("month")["savings"])
+
