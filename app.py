@@ -1,6 +1,10 @@
 import streamlit as st
 from src.finance_cockpit.ingest import read_csv_file
 from src.finance_cockpit.normalize import normalize_transactions
+from src.finance_cockpit.metrics import monthly_summary,monthly_category_pivot
+from src.finance_cockpit.categorize import categorize_transactions
+
+
 
 
 st.title("Finance Cockpit")
@@ -24,12 +28,53 @@ st.dataframe(df.head(50), use_container_width=True)
 st.subheader("Välj kolumner")
 
 columns = df.columns.tolist()
-date_col = st.selectbox("Datumkolumn", columns)
-desc_col = st.selectbox("Beskrivning", columns)
-amount_col = st.selectbox("Belopp", columns)
+
+def default_index(cols: list[str], preferred: list[str], fallback: int) -> int:
+    for name in preferred:
+        if name in cols:
+            return cols.index(name)
+    return min(fallback, len(cols) - 1)
+
+date_col = st.selectbox("Datumkolumn", columns, index=default_index(columns, ["Bokföringsdag", "Datum"], 0))
+desc_col = st.selectbox("Beskrivning", columns, index=default_index(columns, ["Specifikation", "Text"], 1))
+amount_col = st.selectbox("Belopp", columns, index=default_index(columns, ["Belopp", "Amount"], 2))
+
 
 normalized = normalize_transactions(df, date_col, desc_col, amount_col)
 
-st.subheader("Normaliserade transaktioner")
-st.dataframe(normalized.head(50), use_container_width=True)
+categorized = categorize_transactions(normalized)
+
+# --- Sanity check ---
+st.subheader("Översikt")
+col1, col2 = st.columns(2)
+with col1:
+    st.metric("Antal transaktioner", len(categorized))
+with col2:
+    st.metric("Total netto", round(float(categorized["amount"].sum()), 2))
+
+
+
+st.subheader("Transaktioner med kategori")
+st.dataframe(categorized.head(100), use_container_width=True)
+
+
+st.subheader("Summa per kategori")
+by_cat = categorized.groupby("category")["amount"].sum().sort_values()
+st.dataframe(by_cat)
+
+
+pivot = monthly_category_pivot(categorized)
+
+st.subheader("Månad × kategori")
+st.dataframe(pivot, use_container_width=True)
+
+
+monthly = monthly_summary(categorized)
+
+st.subheader("Månadsöversikt")
+st.dataframe(monthly)
+
+st.subheader("Netto per månad")
+st.line_chart(monthly["net"])
+
 
