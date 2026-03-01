@@ -50,3 +50,31 @@ def monthly_category_pivot(df: pd.DataFrame) -> pd.DataFrame:
     )
 
     return pivot
+
+
+def top_expenses_by_description(
+    df: pd.DataFrame,
+    n: int = 20,
+    exclude_categories: list[str] | None = None,
+) -> pd.DataFrame:
+    exclude_categories = exclude_categories or []
+
+    data = df.copy()
+
+    # 1) bara utgifter
+    data = data[data["amount"] < 0]
+
+    # 2) exkludera kategorier (kräver att df har 'category')
+    if "category" in data.columns and exclude_categories:
+        data = data[~data["category"].isin(exclude_categories)]
+
+    # 3) summera per beskrivning
+    data["spent"] = -data["amount"]
+    top = (
+        data.groupby("description")["spent"]
+        .sum()
+        .sort_values(ascending=False)
+        .head(n)
+        .reset_index()
+    )
+    return top

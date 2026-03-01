@@ -1,7 +1,7 @@
 import streamlit as st
 from src.finance_cockpit.ingest import read_csv_file
 from src.finance_cockpit.normalize import normalize_transactions
-from src.finance_cockpit.metrics import monthly_summary,monthly_category_pivot
+from src.finance_cockpit.metrics import monthly_summary,monthly_category_pivot, top_expenses_by_description
 from src.finance_cockpit.categorize import categorize_transactions
 
 
@@ -77,4 +77,18 @@ st.dataframe(monthly)
 st.subheader("Netto per månad")
 st.line_chart(monthly["net"])
 
+st.subheader("Topplista")
 
+all_categories = sorted(categorized["category"].unique().tolist())
+
+exclude = st.multiselect(
+    "Exkludera kategorier",
+    options=all_categories,
+    default=[c for c in ["Swish", "Överföring"] if c in all_categories],
+)
+
+top = top_expenses_by_description(categorized, n=20, exclude_categories=exclude)
+
+st.subheader("Top 20 utgifter (per beskrivning)")
+st.dataframe(top, use_container_width=True)
+st.bar_chart(top.set_index("description")["spent"])
